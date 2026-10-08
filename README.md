@@ -29,14 +29,39 @@ renders it inside an interactive widget embedded in the chat.
 - **Tool contract** — `get_live_data` returns a text summary for the model (strongest and
   deepest event) and the full dataset as `structuredContent` for the widget.
 
+## Information architecture
+
+The widget reads from general to specific:
+
+1. **Summary strip** — four metrics over the current selection: events shown, strongest,
+   shallowest and most recent. Shallowest earns a slot because depth governs damage: a
+   magnitude 5 at 10 km is felt far more sharply than a magnitude 6 at 300 km.
+2. **Control panel** — a translucent layer holding every filter.
+3. **Two-column grid** — the event list and the magnitude-over-time chart on the left, the
+   depth-vs-magnitude scatter and the selected event's detail card on the right. Collapses to
+   a single column below 880px, so it still works embedded in a narrow chat.
+
 ## Widget interactions
 
-1. **Magnitude slider** — filters the event list instantly, client-side.
-2. **Time range chips** (last hour / 24h / 7 days) — calls the tool again over MCP to fetch a
-   different feed.
+1. **Magnitude slider** — filters instantly client-side; the counter updates during the drag,
+   not on release.
+2. **Time range chips** (hour / 24h / 7 days) — calls the tool again over MCP to pull a
+   different feed; the only control that makes a server round trip.
 3. **Place filter** — free-text, instant client-side narrowing.
-4. **Sort + event detail** — sort by magnitude, recency or depth; click an event for depth,
-   coordinates, time, tsunami flag and a link to the full USGS record.
+4. **Sort** — by magnitude, recency or depth.
+5. **Linked selection** — click an event in the list *or* either chart and all three highlight
+   it together, opening a card with depth, coordinates, time, tsunami flag and the USGS record.
+
+Selection and filter state persist through `window.openai.setWidgetState`.
+
+## Design notes
+
+Material and motion follow Apple's Human Interface guidance: translucent chrome via
+`backdrop-filter` with content passing underneath, feedback on pointer-down rather than on
+release, and transitions limited to `transform` and `opacity` so they stay on the compositor.
+Type uses size-specific tracking and tabular numerals so data columns don't shift.
+`prefers-reduced-motion`, `prefers-reduced-transparency` and `prefers-contrast` are all
+honoured, and the list is keyboard navigable.
 
 ## Run locally
 
@@ -44,6 +69,18 @@ renders it inside an interactive widget embedded in the chat.
 npm install
 node server.js                  # http://localhost:8787/mcp
 npx localtunnel --port 8787     # public HTTPS URL
+```
+
+### Try the widget without Athena
+
+`demo/` contains a local host that injects `window.openai` the same way the platform does and
+proxies `callTool` to the running MCP server, so the full round trip is observable without the
+platform:
+
+```bash
+node server.js                               # terminal 1
+node -e "import('./src/widget.js').then(m=>require('fs').writeFileSync('demo/widget.html',m.widgetHtml))"
+cd demo && python3 -m http.server 8080       # terminal 2 → http://localhost:8080/host.html
 ```
 
 ## Connect to Athena
