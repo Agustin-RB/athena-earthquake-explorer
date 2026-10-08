@@ -70,6 +70,9 @@ async function runTool(args = {}) {
         : `No earthquakes matched those filters (${data.subtitle}). Suggest widening the time range or lowering the magnitude threshold.`,
     }],
     structuredContent: data,
+    // El descriptor por sí solo no alcanza: Athena exige que la RESPUESTA
+    // también apunte al recurso, si no renderiza sólo el texto.
+    _meta: { "openai/outputTemplate": WIDGET_URI },
   };
 }
 

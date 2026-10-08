@@ -82,6 +82,9 @@ function buildServer() {
           },
         ],
         structuredContent: data,
+        // El descriptor por sí solo no alcanza: Athena exige que la RESPUESTA
+        // también apunte al recurso, si no renderiza sólo el texto.
+        _meta: { "openai/outputTemplate": WIDGET_URI },
       };
     }
   );
