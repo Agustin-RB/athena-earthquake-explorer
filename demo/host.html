@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Earthquake Explorer — MCP demo host</title>
+<style>
+  body { margin:0; background:#0f1216; font:13px -apple-system,"Segoe UI",sans-serif; color:#9aa3ad; }
+  .host { max-width:1280px; margin:0 auto; padding:18px; }
+  .bar { display:flex; align-items:center; gap:10px; padding:10px 14px; background:#171b20;
+         border:1px solid #272c32; border-radius:9px; margin-bottom:12px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#4b9560; flex:none; }
+  code { color:#6fb8d1; }
+  .frame { background:#fff; border:1px solid #272c32; border-radius:11px; overflow:hidden; }
+  .log { margin-top:10px; font-family:ui-monospace,Menlo,monospace; font-size:11px;
+         color:#7d8690; min-height:32px; white-space:pre-wrap; line-height:1.45; }
+</style>
+</head>
+<body>
+<div class="host">
+  <div class="bar">
+    <span class="dot"></span>
+    <span>MCP server connected · <code>POST /mcp</code> · tool <code>get_live_data</code> · source: USGS public feed</span>
+  </div>
+  <div class="frame"><div id="widget-slot"></div></div>
+  <div class="log" id="log">connecting…</div>
+</div>
+
+<script>
+const MCP = "http://localhost:8787/mcp";
+const logEl = document.getElementById("log");
+const log = (m) => { logEl.textContent = m; };
+let reqId = 100;
+
+async function mcp(method, params) {
+  const r = await fetch(MCP, {
+    method: "POST",
+    headers: { "content-type": "application/json", "accept": "application/json, text/event-stream" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: ++reqId, method, params }),
+  });
+  const j = await r.json();
+  if (j.error) throw new Error(JSON.stringify(j.error));
+  return j.result;
+}
+
+// Simula exactamente el host de Athena: inyecta window.openai antes de montar el widget.
+window.openai = {
+  toolOutput: null, widgetState: null, theme: "light", locale: "en-US",
+  displayMode: "inline", maxHeight: 900,
+  setWidgetState(s) { this.widgetState = s; },
+  async callTool(name, args) {
+    log("→ MCP tools/call  " + name + "  " + JSON.stringify(args));
+    const res = await mcp("tools/call", { name, arguments: args });
+    this.toolOutput = res.structuredContent;
+    log("← " + res.content[0].text.slice(0, 170));
+    window.dispatchEvent(new Event("openai:set_globals"));
+    return res;
+  },
+};
+
+(async () => {
+  try {
+    const args = { period: "day", minMagnitude: 2.5 };
+    log("→ MCP tools/call  get_live_data  " + JSON.stringify(args));
+    const res = await mcp("tools/call", { name: "get_live_data", arguments: args });
+    window.openai.toolOutput = res.structuredContent;
+    log("← " + res.content[0].text.slice(0, 170));
+
+    // El widget se sirve por MCP como resource text/html+skybridge; acá lo montamos igual que Athena.
+    const html = await (await fetch("widget.html")).text();
+    const slot = document.getElementById("widget-slot");
+    slot.innerHTML = html;
+    slot.querySelectorAll("script").forEach((old) => {
+      const s = document.createElement("script");
+      if (old.type) s.type = old.type;
+      s.textContent = old.textContent;
+      old.replaceWith(s);
+    });
+  } catch (e) {
+    log("ERROR: " + e.message);
+  }
+})();
+</script>
+</body>
+</html>

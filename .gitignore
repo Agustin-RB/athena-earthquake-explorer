@@ -29,3 +29,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# generated demo artifact (built from src/widget.js)
+demo/widget.html
