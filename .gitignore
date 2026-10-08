@@ -32,3 +32,4 @@ Thumbs.db
 
 # generated demo artifact (built from src/widget.js)
 demo/widget.html
+.vercel

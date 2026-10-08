@@ -1,11 +1,11 @@
 {
   "name": "athena-challenge",
   "version": "1.0.0",
-  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
-    "tunnel": "npx localtunnel --port 8787"
+    "tunnel": "npx localtunnel --port 8787",
+    "serve": "node server.js",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "Agustín Ruiz Bobatto",
@@ -15,5 +15,6 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
     "zod": "^4.6.5"
-  }
+  },
+  "main": "server.js"
 }
